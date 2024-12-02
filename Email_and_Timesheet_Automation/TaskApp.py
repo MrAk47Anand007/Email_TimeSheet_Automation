@@ -1,9 +1,11 @@
+import os
+import sqlite3
 from datetime import datetime
 
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
     QPushButton, QComboBox, QCheckBox, QCalendarWidget, QTimeEdit,
-    QFormLayout, QLineEdit, QLabel, QTextEdit, QHBoxLayout, QMessageBox
+    QFormLayout, QLineEdit, QLabel, QTextEdit, QHBoxLayout, QMessageBox,QTabWidget
 )
 from PyQt5.QtCore import QDate, QTime, Qt, QTimer
 
@@ -14,7 +16,7 @@ from Email_and_Timesheet_Automation.htmlGenerator import HtmlGenerator
 import json
 import requests
 
-
+from Email_and_Timesheet_Automation.mom_setting import MomSettingsWindow
 
 
 class TaskApp(QWidget):
@@ -33,8 +35,123 @@ class TaskApp(QWidget):
         self.initUI()
         self.update_dropdowns()
 
+    # def initUI(self):
+    #     self.layout = QVBoxLayout()
+    #
+    #     # Create Table for displaying tasks
+    #     self.tableWidget = QTableWidget()
+    #     self.tableWidget.setColumnCount(10)
+    #     self.tableWidget.setHorizontalHeaderLabels([
+    #         "Task Name", "Description", "Start Date", "Due Date",
+    #         "Time Spent (hrs)", "Functional Area", "Assignment",
+    #         "Task Type", "Status", "Delete"
+    #     ])
+    #     self.layout.addWidget(self.tableWidget)
+    #
+    #     # Add Button for adding tasks
+    #     self.add_button = QPushButton("Add Task")
+    #     self.add_button.clicked.connect(self.add_task)
+    #     self.layout.addWidget(self.add_button)
+    #
+    #
+    #
+    #     # Add Automate Button
+    #     self.automate_button = QPushButton("Automate")
+    #     self.automate_button.clicked.connect(self.automate)
+    #     self.layout.addWidget(self.automate_button)
+    #
+    #     self.setLayout(self.layout)
+    #
+    #     # Add Sync with DB Button
+    #     self.sync_button = QPushButton("Sync with DB")
+    #     self.sync_button.clicked.connect(self.sync_with_db)
+    #     self.layout.addWidget(self.sync_button)
+    #
+    #
+    #     # add settings button
+    #     self.settings_button = QPushButton("Settings")
+    #     self.settings_button.clicked.connect(self.open_settings)
+    #     self.layout.addWidget(self.settings_button)
+    #
+    #     # version history button
+    #     self.version_history_button = QPushButton("Version History")
+    #     self.version_history_button.clicked.connect(self.open_version_history)
+    #     self.layout.addWidget(self.version_history_button)
+    #
+    #     self.task_dropdown = QComboBox()
+    #     self.task_dropdown.addItem("Select a Task")
+    #     self.task_dropdown.currentIndexChanged.connect(self.populate_task_details)
+    #     self.layout.addWidget(self.task_dropdown)
+    #
+    #     # Layout for task input
+    #     self.formLayout = QFormLayout()
+    #     self.task_name_input = QLineEdit()
+    #     self.formLayout.addRow("Task Name:", self.task_name_input)
+    #
+    #     self.description_input = QTextEdit()
+    #     self.formLayout.addRow("Description:", self.description_input)
+    #
+    #     # Start Date Widget
+    #     self.start_date_input = self.create_date_widget()
+    #     self.formLayout.addRow("Start Date:", self.start_date_input)
+    #
+    #     # Due Date Widget
+    #     self.due_date_input = self.create_date_widget()
+    #     self.formLayout.addRow("Due Date:", self.due_date_input)
+    #
+    #     # Time Spent Widget
+    #     self.time_spent_input = QTimeEdit(QTime(0, 0))
+    #     self.time_spent_input.setDisplayFormat("HH:mm")
+    #     self.formLayout.addRow("Time Spent (HH:mm):", self.time_spent_input)
+    #
+    #     self.functional_area_input = QComboBox()
+    #     self.functional_area_input.addItems(["Development", "Testing", "Design", "Research", "Training"])
+    #     self.formLayout.addRow("Functional Area:", self.functional_area_input)
+    #
+    #     self.assignment_input = QComboBox()
+    #     self.assignment_input.addItems(["Research", "Task", "Training", "Development"])
+    #     self.formLayout.addRow("Assignment:", self.assignment_input)
+    #
+    #     self.task_type_input = QComboBox()
+    #     self.task_type_input.addItems(["Bug Fix", "Feature", "Research"])
+    #     self.formLayout.addRow("Task Type:", self.task_type_input)
+    #
+    #     self.status_checkbox = QCheckBox("Completed")
+    #     self.formLayout.addRow("Status:", self.status_checkbox)
+    #
+    #     self.mom_completed = QLineEdit()
+    #     self.formLayout.addRow("Mom Completed Percentage:", self.mom_completed)
+    #
+    #     self.layout.addLayout(self.formLayout)
+    #     self.setLayout(self.layout)
+
+
+
     def initUI(self):
+        # Main layout with tabs
         self.layout = QVBoxLayout()
+
+        # Create Tab Widget
+        self.tabs = QTabWidget()
+        self.layout.addWidget(self.tabs)
+
+        # Task Management Tab
+        self.task_tab = QWidget()
+        self.initTaskTab()
+        self.tabs.addTab(self.task_tab, "Task Management")
+
+        # MOM Management Tab
+        self.mom_tab = QWidget()
+        self.initMomManagementTab()
+        self.tabs.addTab(self.mom_tab, "MOM Management")
+
+        self.setLayout(self.layout)
+
+
+
+    def initTaskTab(self):
+        """Initialize the Task Management tab."""
+        task_tab_layout = QVBoxLayout(self.task_tab)
 
         # Create Table for displaying tasks
         self.tableWidget = QTableWidget()
@@ -44,44 +161,40 @@ class TaskApp(QWidget):
             "Time Spent (hrs)", "Functional Area", "Assignment",
             "Task Type", "Status", "Delete"
         ])
-        self.layout.addWidget(self.tableWidget)
+        task_tab_layout.addWidget(self.tableWidget)
 
         # Add Button for adding tasks
         self.add_button = QPushButton("Add Task")
         self.add_button.clicked.connect(self.add_task)
-        self.layout.addWidget(self.add_button)
-
-
+        task_tab_layout.addWidget(self.add_button)
 
         # Add Automate Button
         self.automate_button = QPushButton("Automate")
         self.automate_button.clicked.connect(self.automate)
-        self.layout.addWidget(self.automate_button)
+        task_tab_layout.addWidget(self.automate_button)
 
-        self.setLayout(self.layout)
-
-        # Add Sync with DB Button
+        # Sync with DB Button
         self.sync_button = QPushButton("Sync with DB")
         self.sync_button.clicked.connect(self.sync_with_db)
-        self.layout.addWidget(self.sync_button)
+        task_tab_layout.addWidget(self.sync_button)
 
-
-        # add settings button
+        # Settings Button
         self.settings_button = QPushButton("Settings")
         self.settings_button.clicked.connect(self.open_settings)
-        self.layout.addWidget(self.settings_button)
+        task_tab_layout.addWidget(self.settings_button)
 
-        # version history button
+        # Version History Button
         self.version_history_button = QPushButton("Version History")
         self.version_history_button.clicked.connect(self.open_version_history)
-        self.layout.addWidget(self.version_history_button)
+        task_tab_layout.addWidget(self.version_history_button)
 
+        # Dropdown for selecting a task
         self.task_dropdown = QComboBox()
         self.task_dropdown.addItem("Select a Task")
         self.task_dropdown.currentIndexChanged.connect(self.populate_task_details)
-        self.layout.addWidget(self.task_dropdown)
+        task_tab_layout.addWidget(self.task_dropdown)
 
-        # Layout for task input
+        # Form Layout for Task Input
         self.formLayout = QFormLayout()
         self.task_name_input = QLineEdit()
         self.formLayout.addRow("Task Name:", self.task_name_input)
@@ -102,6 +215,7 @@ class TaskApp(QWidget):
         self.time_spent_input.setDisplayFormat("HH:mm")
         self.formLayout.addRow("Time Spent (HH:mm):", self.time_spent_input)
 
+        # Other Form Fields
         self.functional_area_input = QComboBox()
         self.functional_area_input.addItems(["Development", "Testing", "Design", "Research", "Training"])
         self.formLayout.addRow("Functional Area:", self.functional_area_input)
@@ -117,8 +231,403 @@ class TaskApp(QWidget):
         self.status_checkbox = QCheckBox("Completed")
         self.formLayout.addRow("Status:", self.status_checkbox)
 
-        self.layout.addLayout(self.formLayout)
-        self.setLayout(self.layout)
+        self.mom_completed = QLineEdit()
+        self.formLayout.addRow("Mom Completed Percentage:", self.mom_completed)
+
+        task_tab_layout.addLayout(self.formLayout)
+
+    def initMomManagementTab(self):
+        """Initialize the MOM Management tab."""
+        mom_tab_layout = QVBoxLayout(self.mom_tab)
+
+        # Form for MOM Inputs
+        mom_form_layout = QFormLayout()
+
+        # Dropdown for selecting previous MOM records
+        self.previous_mom_dropdown = QComboBox()
+        self.previous_mom_dropdown.addItem("Select Previous MOM")
+        self.previous_mom_dropdown.currentIndexChanged.connect(self.populate_mom_data)
+        mom_form_layout.addRow("Previous MOM:", self.previous_mom_dropdown)
+
+        # Dropdown for selecting email groups
+        self.email_group_dropdown = QComboBox()
+        self.email_group_dropdown.addItem("Select Group")
+        self.email_group_dropdown.currentIndexChanged.connect(self.populate_emails)
+        mom_form_layout.addRow("Email Group:", self.email_group_dropdown)
+
+        # To Email Input (text box)
+        self.to_input = QTextEdit()
+        mom_form_layout.addRow("To:", self.to_input)
+
+        # CC Email Dropdown (populated from settings)
+        self.cc_dropdown = QComboBox()
+        self.cc_dropdown.addItem("Select CC Group")
+        self.cc_dropdown.currentIndexChanged.connect(self.populate_cc_emails)
+        mom_form_layout.addRow("CC Group:", self.cc_dropdown)
+
+        # CC Input Text Box
+        self.cc_input = QTextEdit()
+        mom_form_layout.addRow("CC:", self.cc_input)
+
+        # MOM Leader Input
+        self.mom_leader_input = QLineEdit()
+        mom_form_layout.addRow("MOM Leader:", self.mom_leader_input)
+
+        # MOM Creator Input
+        self.mom_creator_input = QLineEdit()
+        mom_form_layout.addRow("MOM Creator:", self.mom_creator_input)
+
+        # Present Members Input
+        self.present_input = QTextEdit()
+        mom_form_layout.addRow("Present Members:", self.present_input)
+
+        # Absent Members Input
+        self.absent_input = QTextEdit()
+        mom_form_layout.addRow("Absent Members:", self.absent_input)
+
+
+
+        mom_tab_layout.addLayout(mom_form_layout)
+
+        # Buttons for MOM actions
+        button_layout = QHBoxLayout()
+
+        self.save_mom_button = QPushButton("Save")
+        self.save_mom_button.clicked.connect(self.save_mom_data)
+        button_layout.addWidget(self.save_mom_button)
+
+        self.automate_mom_button = QPushButton("Automate")
+        self.automate_mom_button.clicked.connect(self.automate_mom)
+        button_layout.addWidget(self.automate_mom_button)
+
+        # Settings Button
+        self.settings_button = QPushButton("Settings")
+        self.settings_button.clicked.connect(self.open_mom_settings)
+        button_layout.addWidget(self.settings_button)
+
+        mom_tab_layout.addLayout(button_layout)
+
+        # Load email groups and CC into the dropdowns
+        self.refresh_mom_dropdowns()
+        self.load_previous_mom_data()
+
+    def load_email_groups(self):
+        """Load email groups from settings."""
+        try:
+            # Load settings from the file
+            with open("mom_settings.json", "r") as file:
+                mom_settings = json.load(file)
+                email_groups = mom_settings.get("email_groups", {})  # Get the email addresses
+
+                # Populate the email group dropdown
+                self.email_group_dropdown.addItem("Select Group")  # Default option
+                for group_name in email_groups:
+                    self.email_group_dropdown.addItem(group_name)  # Add group name to the dropdown
+
+        except FileNotFoundError:
+            print("MOM settings file not found.")
+        except Exception as e:
+            print(f"Error loading email groups: {str(e)}")
+
+    def load_previous_mom_data(self):
+        """Load previous MOM data from the database into the dropdown."""
+        try:
+            # Connect to SQLite database
+            conn = sqlite3.connect("mom_management.db")
+            cursor = conn.cursor()
+
+            # Query the database for all MOM records
+            cursor.execute("SELECT id, timestamp FROM mom_data ORDER BY timestamp DESC")
+            mom_records = cursor.fetchall()
+
+            # Populate the dropdown with the retrieved MOM records
+            self.previous_mom_dropdown.clear()
+            self.previous_mom_dropdown.addItem("Select Previous MOM")  # Default option
+            for record in mom_records:
+                mom_id, timestamp = record
+                self.previous_mom_dropdown.addItem(f"MOM ID: {mom_id} - {timestamp}")
+
+            conn.close()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to load previous MOM data: {e}")
+
+    def populate_mom_data(self):
+        """Populate the text fields with the data of the selected previous MOM."""
+        selected_mom_index = self.previous_mom_dropdown.currentIndex()
+        print("ak",selected_mom_index)
+        if selected_mom_index <= 0:  # No MOM selected
+            return
+
+        try:
+            # Connect to SQLite database
+            conn = sqlite3.connect("mom_management.db")
+            cursor = conn.cursor()
+
+            # Get the MOM ID from the selected item
+            selected_mom_id = self.previous_mom_dropdown.currentText().split(" - ")[0].split(": ")[1]
+
+            # Query the database for the selected MOM data
+            cursor.execute(
+                "SELECT to_emails, cc_emails, mom_leader, mom_creator, present_members,absent_members FROM mom_data WHERE id = ?",
+                (selected_mom_id,))
+            mom_record = cursor.fetchone()
+
+            if mom_record:
+                to_emails, cc_emails, mom_leader, mom_creator, absent_members = mom_record
+
+                # Populate the fields with the retrieved data
+                self.to_input.setPlainText(to_emails)
+                self.mom_leader_input.setText(mom_leader)
+                self.mom_creator_input.setText(mom_creator)
+                self.present_input.setPlainText(absent_members)
+                self.absent_input.setPlainText(absent_members)
+                self.cc_input.setPlainText(cc_emails)
+
+
+            else:
+                QMessageBox.warning(self, "Error", "No data found for the selected MOM.")
+
+            conn.close()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to populate MOM data: {e}")
+
+    def load_cc_emails(self):
+        """Load CC emails into the dropdown from settings."""
+        try:
+            # Load settings from the mom_settings.json file
+            with open("mom_settings.json", "r") as file:
+                mom_settings = json.load(file)
+                email_groups = mom_settings.get("email_groups", {})  # Get the email groups
+
+                # Populate CC dropdown with grouped emails
+                self.cc_dropdown.clear()  # Clear previous CC emails
+                for group_name, emails in email_groups.items():
+                    self.cc_dropdown.addItem(group_name)  # Add group as a category
+                    for email in emails:
+                        self.cc_dropdown.addItem(f"  {email}")  # Indented emails under the group
+
+        except FileNotFoundError:
+            print("MOM settings file not found.")
+        except Exception as e:
+            print(f"Error loading CC emails: {str(e)}")
+
+
+
+    def populate_cc_emails(self):
+        """Populate the To field based on the selected email group."""
+        selected_group = self.cc_dropdown.currentText()
+        if selected_group == "Select CC Group":
+            self.cc_input.clear()
+            return  # No group selected
+
+        try:
+            with open("mom_settings.json", "r") as file:
+                mom_settings = json.load(file)
+                email_groups = mom_settings.get("cc_groups", {})
+
+                # Populate "To" field with emails from the selected group
+                emails = email_groups.get(selected_group, [])
+                self.cc_input.setPlainText("; ".join(emails))  # Display emails in the To input field
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to populate emails: {e}")
+
+    def populate_emails(self):
+        """Populate the To field based on the selected email group."""
+        selected_group = self.email_group_dropdown.currentText()
+        if selected_group == "Select Group":
+            self.to_input.clear()
+            return  # No group selected
+
+        try:
+            with open("mom_settings.json", "r") as file:
+                mom_settings = json.load(file)
+                email_groups = mom_settings.get("email_groups", {})
+
+                # Populate "To" field with emails from the selected group
+                emails = email_groups.get(selected_group, [])
+                self.to_input.setPlainText("; ".join(emails))  # Display emails in the To input field
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to populate emails: {e}")
+
+    def refresh_mom_dropdowns(self):
+        """Refresh the Email Group and CC dropdowns based on the updated settings."""
+        try:
+            with open("mom_settings.json", "r") as file:
+                mom_settings = json.load(file)
+                email_groups = mom_settings.get("email_groups", {})
+                cc_groups = mom_settings.get("cc_groups", {})
+
+                # Update Email Group Dropdown
+                self.email_group_dropdown.clear()
+                self.email_group_dropdown.addItem("Select Group")
+                self.email_group_dropdown.addItems(email_groups.keys())
+
+                # Update CC Dropdown
+                self.cc_dropdown.clear()
+                self.cc_dropdown.addItem("Select CC Group")
+                self.cc_dropdown.addItems(cc_groups.keys())
+
+        except FileNotFoundError:
+            QMessageBox.warning(self, "Error", "Settings file not found. Unable to refresh dropdowns.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to refresh dropdowns: {e}")
+
+    def save_mom_data(self):
+        """Save MOM data to an SQLite database."""
+        # Collect the MOM data from the input fields
+        to_emails = "; ".join(self.to_input.toPlainText().splitlines())  # Join emails as a single string
+        cc_emails = self.cc_input.toPlainText().strip()  # Get CC emails from cc_input
+        if not cc_emails:  # If no CC emails are entered, check the dropdown
+            cc_emails = "; ".join([self.cc_dropdown.itemText(i) for i in range(self.cc_dropdown.count()) if
+                                   "  " in self.cc_dropdown.itemText(
+                                       i)])  # Join CC emails from dropdown if cc_input is empty
+        mom_leader = self.mom_leader_input.text()
+        mom_creator = self.mom_creator_input.text()
+        present_member = "; ".join(
+            self.present_input.toPlainText().splitlines())  # Join absent members as a single string
+        absent_members = "; ".join(
+            self.absent_input.toPlainText().splitlines())  # Join absent members as a single string
+
+        mom_data = {
+            "to": to_emails,
+            "cc": cc_emails,
+            "mom_leader": mom_leader,
+            "mom_creator": mom_creator,
+            "present": present_member,
+            "absent": absent_members
+        }
+
+        try:
+            # Connect to SQLite database (or create it if it doesn't exist)
+            conn = sqlite3.connect("mom_management.db")
+            cursor = conn.cursor()
+
+            # Create the MOM table if it doesn't already exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mom_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    to_emails TEXT,
+                    cc_emails TEXT,
+                    mom_leader TEXT,
+                    mom_creator TEXT,
+                    present_members TEXT,
+                    absent_members TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Insert the collected MOM data into the table
+            cursor.execute("""
+                INSERT INTO mom_data (to_emails, cc_emails, mom_leader, mom_creator, present_members,absent_members)
+                VALUES (:to, :cc, :mom_leader, :mom_creator,:present, :absent)
+            """, mom_data)
+
+            # Commit the transaction and close the connection
+            conn.commit()
+            conn.close()
+
+            # Refresh the previous MOM dropdown with the newly saved data
+            self.refresh_previous_mom_dropdown()
+
+            QMessageBox.information(self, "Success", "MOM data saved successfully.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to save MOM data: {str(e)}")
+
+    def open_mom_settings(self):
+        """Open the MOM Settings window and refresh dropdowns after saving."""
+        self.settings_window = MomSettingsWindow(self)
+        self.settings_window.exec_()  # Show settings as a modal dialog
+        self.refresh_mom_dropdowns()  # Refresh dropdowns after closing settings
+
+    def automate_mom(self):
+        """Automate the process by formatting MOM data into JSON and calling the webhook."""
+        # Collect the data from the input fields
+        to_emails = "; ".join(self.to_input.toPlainText().splitlines())  # Join emails as a single string
+        cc_emails = self.cc_input.toPlainText().strip()  # Get CC emails from cc_input
+        if not cc_emails:  # If no CC emails are entered, check the dropdown
+            cc_emails = "; ".join([self.cc_dropdown.itemText(i) for i in range(self.cc_dropdown.count()) if
+                                   "  " in self.cc_dropdown.itemText(
+                                       i)])  # Join CC emails from dropdown if cc_input is empty
+        mom_leader = self.mom_leader_input.text()
+        mom_creator = self.mom_creator_input.text()
+        present_member = "; ".join(
+            self.present_input.toPlainText().splitlines())  # Join absent members as a single string
+        absent_members = "; ".join(
+            self.absent_input.toPlainText().splitlines())  # Join absent members as a single string
+
+        mom_data = {
+            "to": to_emails,
+            "cc": cc_emails,
+            "mom_leader": mom_leader,
+            "mom_creator": mom_creator,
+            "present": present_member,
+            "absent": absent_members
+        }
+
+        # Convert the dictionary to a JSON string
+        json_data = json.dumps(mom_data)
+
+        try:
+            # Load settings from the mom_settings.json file to retrieve the webhook URL
+            with open("mom_settings.json", "r") as file:
+                mom_settings = json.load(file)
+                webhook_url = mom_settings.get("webhook_url", "").strip()  # Get the webhook URL from the settings
+
+            if not webhook_url:
+                QMessageBox.warning(self, "Error", "Webhook URL is not set in the settings.")
+                return
+
+            # Send the JSON data to the webhook
+            response = requests.post(webhook_url, json=mom_data)
+
+            # Check if the request was successful
+            if response.status_code == 200:
+                QMessageBox.information(self, "Success", "MOM data sent to webhook successfully.")
+            else:
+                QMessageBox.warning(self, "Error",
+                                    f"Failed to send data to webhook. Status code: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            QMessageBox.warning(self, "Error", f"An error occurred while sending data to the webhook: {e}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to retrieve webhook URL or send data: {e}")
+
+
+    def refresh_previous_mom_dropdown(self):
+        """Refresh the Previous MOM dropdown with the latest data from the database."""
+        try:
+            # Connect to SQLite database
+            conn = sqlite3.connect("mom_management.db")
+            cursor = conn.cursor()
+
+            # Query the database for all MOM records
+            cursor.execute("SELECT id, timestamp FROM mom_data ORDER BY timestamp DESC")
+            mom_records = cursor.fetchall()
+
+            # Populate the dropdown with the retrieved MOM records
+            self.previous_mom_dropdown.clear()
+            self.previous_mom_dropdown.addItem("Select Previous MOM")  # Default option
+            for record in mom_records:
+                mom_id, timestamp = record
+                self.previous_mom_dropdown.addItem(f"MOM ID: {mom_id} - {timestamp}")
+
+            conn.close()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to refresh Previous MOM dropdown: {e}")
+
+    def setup_email_scheduler(self):
+        schedule_time = QTime.fromString(self.settings["schedule_time"], "HH:mm")
+        now = QTime.currentTime()
+        seconds_until_trigger = now.secsTo(schedule_time)
+        if seconds_until_trigger < 0:  # If time has passed for today
+            seconds_until_trigger += 24 * 3600  # Schedule for tomorrow
+
+        self.email_timer = QTimer(self)
+        self.email_timer.setSingleShot(True)
+        self.email_timer.timeout.connect(self.automate)  # Replace with your email logic
+        self.email_timer.start(seconds_until_trigger * 1000)
+
 
     def load_settings(self):
         try:
@@ -134,18 +643,6 @@ class TaskApp(QWidget):
                 "to_user": [],
                 "cc_user": []
             }
-
-    def setup_email_scheduler(self):
-        schedule_time = QTime.fromString(self.settings["schedule_time"], "HH:mm")
-        now = QTime.currentTime()
-        seconds_until_trigger = now.secsTo(schedule_time)
-        if seconds_until_trigger < 0:  # If time has passed for today
-            seconds_until_trigger += 24 * 3600  # Schedule for tomorrow
-
-        self.email_timer = QTimer(self)
-        self.email_timer.setSingleShot(True)
-        self.email_timer.timeout.connect(self.automate)  # Replace with your email logic
-        self.email_timer.start(seconds_until_trigger * 1000)
 
     def update_dropdowns(self):
         self.functional_area_input.clear()
@@ -286,7 +783,8 @@ class TaskApp(QWidget):
             "htmlContent": html_content,
             "tasks": tasks_data,
             "to_user": self.settings.get("to_user", []),
-            "cc_user": self.settings.get("cc_user", [])
+            "cc_user": self.settings.get("cc_user", []),
+            "mom_completed": self.mom_completed.text()
         }
 
         formatted_json_object = json.dumps(json_object, indent=4)
