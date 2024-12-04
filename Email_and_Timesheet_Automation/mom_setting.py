@@ -37,6 +37,12 @@ class MomSettingsWindow(QDialog):
         self.layout.addWidget(QLabel("Webhook URL:"))
         self.layout.addWidget(self.webhook_url_input)
 
+        # # Webhook URL Editor
+        # self.internal_webhook_url_input = QLineEdit()
+        # self.internal_webhook_url_input.setPlaceholderText("Enter Internal Webhook URL")
+        # self.layout.addWidget(QLabel("Internal Webhook URL:"))
+        # self.layout.addWidget(self.internal_webhook_url_input)
+
         # Save Button
         self.save_button = QPushButton("Save Settings")
         self.save_button.clicked.connect(self.save_settings)
@@ -52,6 +58,7 @@ class MomSettingsWindow(QDialog):
             email_groups_text = self.email_groups_editor.toPlainText().strip()
             cc_groups_text = self.cc_groups_editor.toPlainText().strip()
             webhook_url = self.webhook_url_input.text().strip()
+            # internal_webhook_url= self.internal_webhook_url_input.text().strip()
 
             # Convert email groups to a dictionary
             email_groups = {}
@@ -71,7 +78,8 @@ class MomSettingsWindow(QDialog):
             mom_settings = {
                 "email_groups": email_groups,
                 "cc_groups": cc_groups,
-                "webhook_url": webhook_url
+                "webhook_url": webhook_url,
+                # "internal_webhook_url":internal_webhook_url
             }
 
             # Save to the JSON file
@@ -97,6 +105,7 @@ class MomSettingsWindow(QDialog):
                 email_groups = mom_settings.get("email_groups", {})
                 cc_groups = mom_settings.get("cc_groups", {})
                 webhook_url = mom_settings.get("webhook_url", "")
+                # internal_webhook_url = mom_settings.get("internal_webhook_url","")
 
                 # Populate email groups editor
                 email_groups_text = "\n".join(
@@ -112,11 +121,14 @@ class MomSettingsWindow(QDialog):
 
                 # Populate webhook URL input
                 self.webhook_url_input.setText(webhook_url)
+
+                # self.internal_webhook_url_input.setText(internal_webhook_url)
             else:
                 # If the file does not exist, clear the fields
                 self.email_groups_editor.clear()
                 self.cc_groups_editor.clear()
                 self.webhook_url_input.clear()
+                # self.internal_webhook_url_input.clear()
 
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to load settings: {e}")

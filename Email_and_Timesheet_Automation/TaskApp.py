@@ -202,6 +202,9 @@ class TaskApp(QWidget):
         self.description_input = QTextEdit()
         self.formLayout.addRow("Description:", self.description_input)
 
+        self.todays_target = QLineEdit()
+        self.formLayout.addRow("Today's Target:", self.todays_target)
+
         # Start Date Widget
         self.start_date_input = self.create_date_widget()
         self.formLayout.addRow("Start Date:", self.start_date_input)
@@ -373,13 +376,13 @@ class TaskApp(QWidget):
             mom_record = cursor.fetchone()
 
             if mom_record:
-                to_emails, cc_emails, mom_leader, mom_creator, absent_members = mom_record
+                to_emails, cc_emails, mom_leader, mom_creator,present_members, absent_members = mom_record
 
                 # Populate the fields with the retrieved data
                 self.to_input.setPlainText(to_emails)
                 self.mom_leader_input.setText(mom_leader)
                 self.mom_creator_input.setText(mom_creator)
-                self.present_input.setPlainText(absent_members)
+                self.present_input.setPlainText(present_members)
                 self.absent_input.setPlainText(absent_members)
                 self.cc_input.setPlainText(cc_emails)
 
@@ -542,28 +545,28 @@ class TaskApp(QWidget):
         self.refresh_mom_dropdowns()  # Refresh dropdowns after closing settings
 
     def automate_mom(self):
-        """Automate the process by formatting MOM data into JSON and calling the webhook."""
-        # Collect the data from the input fields
+        """
+        Automate the process by formatting MOM data into JSON and calling the webhook.
+        """
         to_emails = "; ".join(self.to_input.toPlainText().splitlines())  # Join emails as a single string
-        cc_emails = self.cc_input.toPlainText().strip()  # Get CC emails from cc_input
+        cc_emails = self.cc_input.toPlainText().strip()
         if not cc_emails:  # If no CC emails are entered, check the dropdown
             cc_emails = "; ".join([self.cc_dropdown.itemText(i) for i in range(self.cc_dropdown.count()) if
-                                   "  " in self.cc_dropdown.itemText(
-                                       i)])  # Join CC emails from dropdown if cc_input is empty
+                                   "  " in self.cc_dropdown.itemText(i)])
         mom_leader = self.mom_leader_input.text()
         mom_creator = self.mom_creator_input.text()
-        present_member = "; ".join(
-            self.present_input.toPlainText().splitlines())  # Join absent members as a single string
-        absent_members = "; ".join(
-            self.absent_input.toPlainText().splitlines())  # Join absent members as a single string
+        present_member = "; ".join(self.present_input.toPlainText().splitlines())
+        absent_members_pre = self.absent_input.toPlainText()
+        absent_members = ", ".join([member.strip() for member in absent_members_pre.splitlines()])
 
+        # Step 4: Prepare the final JSON data
         mom_data = {
             "to": to_emails,
             "cc": cc_emails,
             "mom_leader": mom_leader,
             "mom_creator": mom_creator,
             "present": present_member,
-            "absent": absent_members
+            "absent": absent_members,
         }
 
         # Convert the dictionary to a JSON string
@@ -573,7 +576,7 @@ class TaskApp(QWidget):
             # Load settings from the mom_settings.json file to retrieve the webhook URL
             with open("mom_settings.json", "r") as file:
                 mom_settings = json.load(file)
-                webhook_url = mom_settings.get("webhook_url", "").strip()  # Get the webhook URL from the settings
+                webhook_url = mom_settings.get("webhook_url", "").strip()
 
             if not webhook_url:
                 QMessageBox.warning(self, "Error", "Webhook URL is not set in the settings.")
@@ -583,7 +586,7 @@ class TaskApp(QWidget):
             response = requests.post(webhook_url, json=mom_data)
 
             # Check if the request was successful
-            if response.status_code == 200:
+            if response.status_code == 202:
                 QMessageBox.information(self, "Success", "MOM data sent to webhook successfully.")
             else:
                 QMessageBox.warning(self, "Error",
@@ -593,6 +596,48 @@ class TaskApp(QWidget):
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to retrieve webhook URL or send data: {e}")
 
+    # def automate_mom_internal(self):
+    #     """
+    #     Fetch data from an internal webhook for MOM automation.
+    #     Filters out absent members with '(2nd Shift)' in their name
+    #     and returns the processed data.
+    #     """
+    #     try:
+    #         # Load settings to retrieve the internal webhook URL
+    #         with open("mom_settings.json", "r") as file:
+    #             mom_settings = json.load(file)
+    #             internal_webhook_url = mom_settings.get("internal_webhook_url",
+    #                                                     "").strip()  # Fetch internal webhook URL
+    #
+    #         if not internal_webhook_url:
+    #             QMessageBox.warning(self, "Error", "Internal Webhook URL is not set in the settings.")
+    #             return []
+    #
+    #         # Call the internal webhook to get the MOM data
+    #         response = requests.post(internal_webhook_url)
+    #
+    #         # Check if the request was successful
+    #         if response.status_code == 200:
+    #             data = response.json()
+    #             print(data)
+    #
+    #             # Validate if the response is a list
+    #             if not isinstance(data, list):
+    #                 QMessageBox.warning(self, "Error", "Unexpected response format from the internal webhook.")
+    #                 return []
+    #
+    #             # Return the raw data for further processing
+    #             return data
+    #         else:
+    #             QMessageBox.warning(self, "Error",
+    #                                 f"Failed to fetch data from internal webhook. Status code: {response.status_code}")
+    #             return []
+    #     except requests.exceptions.RequestException as e:
+    #         QMessageBox.warning(self, "Error", f"An error occurred while fetching data from the internal webhook: {e}")
+    #         return []
+    #     except Exception as e:
+    #         QMessageBox.warning(self, "Error", f"Failed to process data from internal webhook: {e}")
+    #         return []
 
     def refresh_previous_mom_dropdown(self):
         """Refresh the Previous MOM dropdown with the latest data from the database."""
@@ -784,7 +829,8 @@ class TaskApp(QWidget):
             "tasks": tasks_data,
             "to_user": self.settings.get("to_user", []),
             "cc_user": self.settings.get("cc_user", []),
-            "mom_completed": self.mom_completed.text()
+            "mom_completed": self.mom_completed.text(),
+            "todays_target": self.todays_target.text()
         }
 
         formatted_json_object = json.dumps(json_object, indent=4)

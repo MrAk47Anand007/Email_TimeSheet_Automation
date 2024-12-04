@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
     QFormLayout, QLineEdit, QLabel, QTextEdit, QHBoxLayout, QMessageBox
 )
 from PyQt5.QtCore import QDate, QTime, Qt, QTimer, pyqtSignal
+import json
 
 
 class SettingsWindow(QWidget):
