@@ -1,8 +1,30 @@
+import os
+import json
 class HtmlGenerator:
     @staticmethod
     def generate_task_table(task_collection: 'TaskCollection') -> str:
         date = task_collection.date.strftime("%Y-%m-%d")
         tasks = task_collection.to_dict()["Tasks"]
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(script_dir, "../settings.json")  # Adjust this if needed
+
+        try:
+            # Open and read the JSON file
+            with open(config_path, "r") as config_file:
+                config = json.load(config_file)
+
+            role = config.get("role", "")
+            first_line_role = role.splitlines()[0]
+            last_line_role = role.splitlines()[len(role.splitlines()) - 1]
+            name = config.get("name", "")
+            mobile_no = config.get("mobile_no", "")
+            email = config.get("email", "")
+            timesheet_link = config.get("timesheet_link", "")
+
+        except FileNotFoundError:
+            print("Error: settings.json file not found.")
+
 
         html_content = f"""
         <!DOCTYPE html>
@@ -71,11 +93,11 @@ class HtmlGenerator:
             </tr>
             """
 
-        html_content += """
+        html_content += f"""
                 </tbody>
             </table>
             <div><br></div>
-<div style="font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif; font-size:12pt; color:rgb(0,0,0)">Monthly Timesheet:<span style="display:inline-block" class="x__Entity x__EType_OWALink x__EId_OWALink x__EReadonly_1"><span><a style="padding:0px 1px; border-radius:2px; background-color:rgb(243,242,241)" data-loopstyle="linkonly" data-ogsc="" class="x_OWAAutoLink x_eScj0 x_none" id="OLK_Beautified_OWA714b63d5-9c01-a2fb-d9ab-c1057d075e88" data-auth="NotApplicable" rel="noopener noreferrer" target="_blank" href="https://xaltatech-my.sharepoint.com/:x:/g/personal/anand_kale_xalta_tech/EfFgK0eMvDBGiazgTquL5ZIBtVNj-c5mJJ3x9LQecjfBow?e=IQ6XMW" title="Original URL: https://xaltatech-my.sharepoint.com/:x:/g/personal/anand_kale_xalta_tech/EfFgK0eMvDBGiazgTquL5ZIBtVNj-c5mJJ3x9LQecjfBow?e=IQ6XMW. Click or tap if you trust this link." data-linkindex="0"><img style="width:16px; height:16px; vertical-align:middle; padding:1px 2px 2px 0px" role="presentation" alt="" class="x_suRDx" src="https://res.public.onecdn.static.microsoft/assets/mail/file-icon/png/xlsx_16x16.png" data-imagetype="External">XT0033_Anand_Kale_Monthly_Timesheet.xlsx</a></span></span></div>
+<div style="font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif; font-size:12pt; color:rgb(0,0,0)">Monthly Timesheet:<span style="display:inline-block" class="x__Entity x__EType_OWALink x__EId_OWALink x__EReadonly_1"><span><a style="padding:0px 1px; border-radius:2px; background-color:rgb(243,242,241)" data-loopstyle="linkonly" data-ogsc="" class="x_OWAAutoLink x_eScj0 x_none" id="OLK_Beautified_OWA714b63d5-9c01-a2fb-d9ab-c1057d075e88" data-auth="NotApplicable" rel="noopener noreferrer" target="_blank" href="{timesheet_link}" title="Original URL: {timesheet_link}. Click or tap if you trust this link." data-linkindex="0"><img style="width:16px; height:16px; vertical-align:middle; padding:1px 2px 2px 0px" role="presentation" alt="" class="x_suRDx" src="https://res.public.onecdn.static.microsoft/assets/mail/file-icon/png/xlsx_16x16.png" data-imagetype="External">XT0033_Anand_Kale_Monthly_Timesheet.xlsx</a></span></span></div>
 
 <div style="font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif; font-size:12pt; color:rgb(0,0,0)"><br></div>
 
@@ -94,9 +116,9 @@ class HtmlGenerator:
 <tbody>
 <tr>
 <td style="text-align: left; padding: 0.75pt; width: 472.333px; height: 66px;">
-<p style="text-align: left; margin-top: 0px; margin-bottom: 0px;"><span style="font-family: &quot;Segoe UI&quot;, sans-serif; font-size: 15px; color: rgb(100, 100, 100);"><b>Anand Sudhir Kale<br></b></span><span style="font-family: &quot;Segoe UI&quot;, &quot;Segoe UI Web (West European)&quot;, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, sans-serif; font-size: 15px; color: rgb(66, 66, 66);">Developer-Enterprise</span></p>
+<p style="text-align: left; margin-top: 0px; margin-bottom: 0px;"><span style="font-family: &quot;Segoe UI&quot;, sans-serif; font-size: 15px; color: rgb(100, 100, 100);"><b>{name}<br></b></span><span style="font-family: &quot;Segoe UI&quot;, &quot;Segoe UI Web (West European)&quot;, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, sans-serif; font-size: 15px; color: rgb(66, 66, 66);">{first_line_role}</span></p>
 <p
-style="text-align: left; margin-top: 0px; margin-bottom: 0px;"><span style="font-family: &quot;Segoe UI&quot;, &quot;Segoe UI Web (West European)&quot;, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, sans-serif; font-size: 15px; color: rgb(66, 66, 66);">Automation</span></p>
+style="text-align: left; margin-top: 0px; margin-bottom: 0px;"><span style="font-family: &quot;Segoe UI&quot;, &quot;Segoe UI Web (West European)&quot;, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, sans-serif; font-size: 15px; color: rgb(66, 66, 66);">{last_line_role}</span></p>
 </td>
 </tr>
 <tr>
@@ -104,17 +126,17 @@ style="text-align: left; margin-top: 0px; margin-bottom: 0px;"><span style="font
 <table style="text-align: left; box-sizing: border-box; border-collapse: collapse; border-spacing: 0px;">
 <tbody>
 <tr>
-<td style="text-align: left; padding-top: 10.5pt; width: 357.75pt; height: 36.3333px;">
-<p style="text-align: left; margin: 0px 0.1pt;"><span style="font-family: &quot;Segoe UI&quot;, sans-serif; font-size: 10pt; color: rgb(33, 33, 33);">M: +917028568004</span></p>
+<td style="text-align: left; padding: 0.75pt 0; width: 357.75pt; height: 36.3333px;">
+<p style="text-align: left; margin: 0px 0.1pt;"><span style="font-family: &quot;Segoe UI&quot;, sans-serif; font-size: 10pt; color: rgb(33, 33, 33);">M: {mobile_no}</span></p>
 </td>
 </tr>
 <tr>
-<td style="text-align: left; padding-top: 5.25pt; width: 188.25pt; height: 29.3333px;">
-<p style="text-align: left; margin: 0px 0.1pt;"><span style="font-family: &quot;Segoe UI&quot;, sans-serif; font-size: 10pt; color: rgb(33, 33, 33);">E: anand.kale@xalta.tech</span></p>
+<td style="text-align: left;padding: 0.75pt 0; width: 188.25pt; height: 29.3333px;">
+<p style="text-align: left; margin: 0px 0.1pt;"><span style="font-family: &quot;Segoe UI&quot;, sans-serif; font-size: 10pt; color: rgb(33, 33, 33);">E: {email}</span></p>
 </td>
 </tr>
 <tr>
-<td style="text-align: left; padding-top: 5.25pt; width: 188.25pt; height: 29.3333px;">
+<td style="text-align: left;padding: 0.75pt 0; width: 188.25pt; height: 29.3333px;">
 <p style="text-align: left; margin: 0px 0.1pt;"><span style="font-family: &quot;Segoe UI&quot;, sans-serif; font-size: 10pt; color: rgb(66, 66, 66);">www.xalta.tech</span></p>
 </td>
 </tr>

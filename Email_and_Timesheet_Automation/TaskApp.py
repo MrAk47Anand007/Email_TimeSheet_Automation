@@ -2,6 +2,7 @@ import os
 import sqlite3
 from datetime import datetime
 
+
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
     QPushButton, QComboBox, QCheckBox, QCalendarWidget, QTimeEdit,
@@ -13,6 +14,7 @@ from Email_and_Timesheet_Automation.SettingWindow import SettingsWindow
 from Email_and_Timesheet_Automation.VersionHistory import VersionHistoryWindow
 from Email_and_Timesheet_Automation.dbConfig import init_sqlite_db, init_chromadb
 from Email_and_Timesheet_Automation.htmlGenerator import HtmlGenerator
+from Email_and_Timesheet_Automation.momSignature import generate_signature
 import json
 import requests
 
@@ -567,6 +569,7 @@ class TaskApp(QWidget):
             "mom_creator": mom_creator,
             "present": present_member,
             "absent": absent_members,
+            "signature": generate_signature()
         }
 
         # Convert the dictionary to a JSON string
@@ -675,9 +678,15 @@ class TaskApp(QWidget):
 
 
     def load_settings(self):
+        # Get the directory of the current script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(script_dir, "../settings.json")
+
+
         try:
-            with open("./Email_and_Timesheet_Automation/settings.json", "r") as config_file:
-                self.settings = json.load(config_file)
+            # Use the resolved path
+            with open(config_path, "r") as config_file:
+                self.settings= json.load(config_file)
         except FileNotFoundError:
             self.settings = {
                 "functional_areas": ["Development", "Testing", "Design"],
@@ -686,7 +695,12 @@ class TaskApp(QWidget):
                 "schedule_time": "09:00",
                 "webhook_url": "",
                 "to_user": [],
-                "cc_user": []
+                "cc_user": [],
+                "role":"",
+                "email":"",
+                "name":"",
+                "mobileNo":"",
+                "timesheet_link":""
             }
 
     def update_dropdowns(self):
