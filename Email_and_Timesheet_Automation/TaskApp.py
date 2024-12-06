@@ -1,23 +1,22 @@
 import os
 import sqlite3
+import json
+import requests
+import faiss
+import numpy as np
 from datetime import datetime
-
-
+from sentence_transformers import SentenceTransformer
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
     QPushButton, QComboBox, QCheckBox, QCalendarWidget, QTimeEdit,
     QFormLayout, QLineEdit, QLabel, QTextEdit, QHBoxLayout, QMessageBox,QTabWidget
 )
 from PyQt5.QtCore import QDate, QTime, Qt, QTimer
-
 from Email_and_Timesheet_Automation.SettingWindow import SettingsWindow
 from Email_and_Timesheet_Automation.VersionHistory import VersionHistoryWindow
-from Email_and_Timesheet_Automation.dbConfig import init_sqlite_db, init_chromadb
+from Email_and_Timesheet_Automation.dbConfig import init_sqlite_db
 from Email_and_Timesheet_Automation.htmlGenerator import HtmlGenerator
 from Email_and_Timesheet_Automation.momSignature import generate_signature
-import json
-import requests
-
 from Email_and_Timesheet_Automation.mom_setting import MomSettingsWindow
 
 
@@ -28,105 +27,24 @@ class TaskApp(QWidget):
         self.load_settings()
         self.setup_email_scheduler()
         self.conn = init_sqlite_db()
-        self.chromadb = init_chromadb()
+        # Initialize SentenceTransformer model (for task embeddings)
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')  # Pre-trained sentence transformer
 
+        # Dynamically set the dimension based on the model's embedding output
+        dummy_embedding = self.model.encode(["dummy task"])[0]  # Generate a dummy embedding
+        self.dimension = len(dummy_embedding)  # Set dimension dynamically based on embedding size
+
+        # Initialize FAISS index with the determined dimension
+        self.index = faiss.IndexFlatL2(self.dimension)
+
+        self.metadata = []  # To store metadata (task data)
         self.setWindowTitle("Task Management")
         self.setGeometry(100, 100, 900, 700)
         self.layout = QVBoxLayout()
 
+
         self.initUI()
         self.update_dropdowns()
-
-    # def initUI(self):
-    #     self.layout = QVBoxLayout()
-    #
-    #     # Create Table for displaying tasks
-    #     self.tableWidget = QTableWidget()
-    #     self.tableWidget.setColumnCount(10)
-    #     self.tableWidget.setHorizontalHeaderLabels([
-    #         "Task Name", "Description", "Start Date", "Due Date",
-    #         "Time Spent (hrs)", "Functional Area", "Assignment",
-    #         "Task Type", "Status", "Delete"
-    #     ])
-    #     self.layout.addWidget(self.tableWidget)
-    #
-    #     # Add Button for adding tasks
-    #     self.add_button = QPushButton("Add Task")
-    #     self.add_button.clicked.connect(self.add_task)
-    #     self.layout.addWidget(self.add_button)
-    #
-    #
-    #
-    #     # Add Automate Button
-    #     self.automate_button = QPushButton("Automate")
-    #     self.automate_button.clicked.connect(self.automate)
-    #     self.layout.addWidget(self.automate_button)
-    #
-    #     self.setLayout(self.layout)
-    #
-    #     # Add Sync with DB Button
-    #     self.sync_button = QPushButton("Sync with DB")
-    #     self.sync_button.clicked.connect(self.sync_with_db)
-    #     self.layout.addWidget(self.sync_button)
-    #
-    #
-    #     # add settings button
-    #     self.settings_button = QPushButton("Settings")
-    #     self.settings_button.clicked.connect(self.open_settings)
-    #     self.layout.addWidget(self.settings_button)
-    #
-    #     # version history button
-    #     self.version_history_button = QPushButton("Version History")
-    #     self.version_history_button.clicked.connect(self.open_version_history)
-    #     self.layout.addWidget(self.version_history_button)
-    #
-    #     self.task_dropdown = QComboBox()
-    #     self.task_dropdown.addItem("Select a Task")
-    #     self.task_dropdown.currentIndexChanged.connect(self.populate_task_details)
-    #     self.layout.addWidget(self.task_dropdown)
-    #
-    #     # Layout for task input
-    #     self.formLayout = QFormLayout()
-    #     self.task_name_input = QLineEdit()
-    #     self.formLayout.addRow("Task Name:", self.task_name_input)
-    #
-    #     self.description_input = QTextEdit()
-    #     self.formLayout.addRow("Description:", self.description_input)
-    #
-    #     # Start Date Widget
-    #     self.start_date_input = self.create_date_widget()
-    #     self.formLayout.addRow("Start Date:", self.start_date_input)
-    #
-    #     # Due Date Widget
-    #     self.due_date_input = self.create_date_widget()
-    #     self.formLayout.addRow("Due Date:", self.due_date_input)
-    #
-    #     # Time Spent Widget
-    #     self.time_spent_input = QTimeEdit(QTime(0, 0))
-    #     self.time_spent_input.setDisplayFormat("HH:mm")
-    #     self.formLayout.addRow("Time Spent (HH:mm):", self.time_spent_input)
-    #
-    #     self.functional_area_input = QComboBox()
-    #     self.functional_area_input.addItems(["Development", "Testing", "Design", "Research", "Training"])
-    #     self.formLayout.addRow("Functional Area:", self.functional_area_input)
-    #
-    #     self.assignment_input = QComboBox()
-    #     self.assignment_input.addItems(["Research", "Task", "Training", "Development"])
-    #     self.formLayout.addRow("Assignment:", self.assignment_input)
-    #
-    #     self.task_type_input = QComboBox()
-    #     self.task_type_input.addItems(["Bug Fix", "Feature", "Research"])
-    #     self.formLayout.addRow("Task Type:", self.task_type_input)
-    #
-    #     self.status_checkbox = QCheckBox("Completed")
-    #     self.formLayout.addRow("Status:", self.status_checkbox)
-    #
-    #     self.mom_completed = QLineEdit()
-    #     self.formLayout.addRow("Mom Completed Percentage:", self.mom_completed)
-    #
-    #     self.layout.addLayout(self.formLayout)
-    #     self.setLayout(self.layout)
-
 
 
     def initUI(self):
@@ -599,49 +517,6 @@ class TaskApp(QWidget):
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to retrieve webhook URL or send data: {e}")
 
-    # def automate_mom_internal(self):
-    #     """
-    #     Fetch data from an internal webhook for MOM automation.
-    #     Filters out absent members with '(2nd Shift)' in their name
-    #     and returns the processed data.
-    #     """
-    #     try:
-    #         # Load settings to retrieve the internal webhook URL
-    #         with open("mom_settings.json", "r") as file:
-    #             mom_settings = json.load(file)
-    #             internal_webhook_url = mom_settings.get("internal_webhook_url",
-    #                                                     "").strip()  # Fetch internal webhook URL
-    #
-    #         if not internal_webhook_url:
-    #             QMessageBox.warning(self, "Error", "Internal Webhook URL is not set in the settings.")
-    #             return []
-    #
-    #         # Call the internal webhook to get the MOM data
-    #         response = requests.post(internal_webhook_url)
-    #
-    #         # Check if the request was successful
-    #         if response.status_code == 200:
-    #             data = response.json()
-    #             print(data)
-    #
-    #             # Validate if the response is a list
-    #             if not isinstance(data, list):
-    #                 QMessageBox.warning(self, "Error", "Unexpected response format from the internal webhook.")
-    #                 return []
-    #
-    #             # Return the raw data for further processing
-    #             return data
-    #         else:
-    #             QMessageBox.warning(self, "Error",
-    #                                 f"Failed to fetch data from internal webhook. Status code: {response.status_code}")
-    #             return []
-    #     except requests.exceptions.RequestException as e:
-    #         QMessageBox.warning(self, "Error", f"An error occurred while fetching data from the internal webhook: {e}")
-    #         return []
-    #     except Exception as e:
-    #         QMessageBox.warning(self, "Error", f"Failed to process data from internal webhook: {e}")
-    #         return []
-
     def refresh_previous_mom_dropdown(self):
         """Refresh the Previous MOM dropdown with the latest data from the database."""
         try:
@@ -754,11 +629,11 @@ class TaskApp(QWidget):
             QMessageBox.warning(self, "Validation Error", "Task Name, Start Date, and Due Date are required.")
             return
 
-        # Insert new task into the main tasks table
+        # Insert new task into the main tasks table (SQL)
         cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO tasks (task_name, description, start_date, due_date, time_spent, functional_area, assignment, task_type, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        cursor.execute(""" 
+            INSERT INTO tasks (task_name, description, start_date, due_date, time_spent, functional_area, assignment, task_type, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
         """, (
             task_name,
             description,
@@ -773,7 +648,7 @@ class TaskApp(QWidget):
 
         task_id = cursor.lastrowid  # Get the ID of the inserted task
 
-        # Add a version entry for the task
+        # Add a version entry for the task (Task versioning)
         version_data = {
             "task_name": task_name,
             "description": description,
@@ -785,9 +660,9 @@ class TaskApp(QWidget):
             "task_type": self.task_type_input.currentText(),
             "status": "Completed" if self.status_checkbox.isChecked() else "Pending"
         }
-        cursor.execute("""
-            INSERT INTO task_versions (task_id, task_name, version_date, version_data)
-            VALUES (?, ?, ?, ?)
+        cursor.execute(""" 
+            INSERT INTO task_versions (task_id, task_name, version_date, version_data) 
+            VALUES (?, ?, ?, ?) 
         """, (
             task_id,
             task_name,
@@ -797,15 +672,38 @@ class TaskApp(QWidget):
 
         self.conn.commit()
 
+        # Generate task embedding using SentenceTransformer
+        task_text = f"{task_name} {description} {start_date} {due_date}"
+        task_embedding = self.model.encode([task_text])[0]  # Embedding for the task (single vector)
+
+        # Validate embedding size matches FAISS index dimension
+        if len(task_embedding) != self.index.d:
+            raise ValueError(f"Embedding dimension mismatch: Expected {self.index.d}, got {len(task_embedding)}")
+
+        # Add the task embedding to FAISS
+        self.index.add(np.array([task_embedding]))
+
+        # Store metadata for the task
+        self.metadata.append({
+            "id": task_id,
+            "task_data": version_data
+        })
+
         # Add task to the UI table
         row_position = self.tableWidget.rowCount()
         self.tableWidget.insertRow(row_position)
-        for i, key in enumerate(version_data.keys()):
+
+        # Assuming column 0 is for task_id (hidden), and subsequent columns are for task data
+        self.tableWidget.setItem(row_position, 0, QTableWidgetItem(str(task_id)))  # Task ID (hidden column)
+        for i, key in enumerate(version_data.keys(), start=1):  # Start from column 1
             self.tableWidget.setItem(row_position, i, QTableWidgetItem(str(version_data[key])))
+
+        # Hide the task_id column (if it's not meant to be visible)
+        self.tableWidget.setColumnHidden(0, True)
 
         # Add Delete button
         delete_button = QPushButton("Delete")
-        delete_button.clicked.connect(lambda: self.delete_task(row_position))
+        delete_button.clicked.connect(lambda: self.delete_task(task_id))
         self.tableWidget.setCellWidget(row_position, len(version_data), delete_button)
 
         # Clear inputs after adding the task
@@ -854,18 +752,7 @@ class TaskApp(QWidget):
         # Display the HTML content (can be used to save, print, or display)
         QMessageBox.information(self, "Generated HTML", html_content)
 
-    def add_task_to_sqlite(self, task_data):
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO tasks (task_name, description, start_date, due_date, time_spent,
-                               functional_area, assignment, task_type, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            task_data["task_name"], task_data["description"], task_data["start_date"],
-            task_data["due_date"], task_data["time_spent"], task_data["functional_area"],
-            task_data["assignment"], task_data["task_type"], task_data["status"]
-        ))
-        self.conn.commit()
+
 
     def view_version_history(self, task_id):
         cursor = self.conn.cursor()
@@ -880,30 +767,100 @@ class TaskApp(QWidget):
 
         QMessageBox.information(self, "Version History", history_text)
 
-    def add_task_to_chromadb(self, task_data):
-        # Convert data to JSON and add to ChromaDB
-        task_id = str(self.tableWidget.rowCount() + 1)  # Unique ID
-        task_json = json.dumps(task_data)
-        self.chromadb.add(
-            ids=[task_id],
-            documents=[task_json],
-            metadatas=[task_data]
-        )
+
 
     def open_version_history(self):
         self.version_history_window = VersionHistoryWindow(parent=self, conn=self.conn)
         self.version_history_window.show()
 
-    def delete_task(self, row):
-        task_name = self.tableWidget.item(row, 0).text()  # Assuming the first column is the task name
-        self.remove_task_from_sqlite(task_name)
-        self.remove_task_from_chromadb(task_name)
-        self.tableWidget.removeRow(row)
+    def delete_task(self, task_id):
+        """
+        Deletes a task from the FAISS index, metadata, SQLite database, and the UI by task_id.
+        :param task_id: The unique task ID to delete
+        """
+        # Locate the task in the metadata list
+        task_idx = next((idx for idx, task in enumerate(self.metadata) if task["id"] == task_id), None)
+
+        if task_idx is None:
+            QMessageBox.warning(self, "Error", f"Task with ID {task_id} not found.")
+            return
+
+        try:
+            # Begin SQLite deletion
+            cursor = self.conn.cursor()
+
+            # Delete task from the `tasks` table
+            cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+            self.conn.commit()
+            print(f"Task with ID {task_id} deleted from SQLite.")
+
+            # Remove metadata entry
+            self.metadata.pop(task_idx)
+
+            # Remove task from the UI table
+            for row in range(self.tableWidget.rowCount()):
+                # Assuming task_id is stored in the first (hidden) column
+                table_task_id = self.tableWidget.item(row, 0).text()
+                if str(task_id) == table_task_id:  # Match task_id as string
+                    self.tableWidget.removeRow(row)
+                    print(f"Task with ID {task_id} removed from the UI table.")
+                    break
+
+            # Rebuild the FAISS index
+            self.rebuild_faiss_index()
+
+            print(f"Task with ID {task_id} deleted from FAISS.")
+            QMessageBox.information(self, "Success", f"Task with ID {task_id} has been deleted successfully.")
+
+        except Exception as e:
+            print(f"Error deleting task with ID {task_id}: {e}")
+            QMessageBox.warning(self, "Error", f"Failed to delete task with ID {task_id}.")
+
+    def search_task_with_faiss(self, query_embedding, k=5):
+        """
+        Search for similar tasks based on query embedding.
+        query_embedding: A numpy array representing the query vector
+        k: Number of similar results to return
+        """
+        # Perform the search
+        distances, indices = self.index.search(np.array([query_embedding]), k)
+
+        results = []
+        for idx in indices[0]:
+            task = self.metadata[idx]
+            results.append(task)
+
+        return results
 
     def open_settings(self):
         self.settings_window = SettingsWindow(self)
         self.settings_window.settings_updated.connect(self.refresh_settings)  # Connect the signal
         self.settings_window.show()
+
+    def rebuild_faiss_index(self):
+        """
+        Rebuilds the FAISS index using the current metadata.
+        """
+        try:
+            # Reinitialize the FAISS index
+            self.index = faiss.IndexFlatL2(self.dimension)
+            new_embeddings = []
+
+            # Extract embeddings from metadata
+            for task in self.metadata:
+                task_data = task["task_data"]  # Assuming embeddings are stored in task_data
+                embedding = task_data.get("embedding")  # Adjust based on actual metadata structure
+                if embedding:
+                    new_embeddings.append(np.array(embedding))
+
+            # Add the embeddings back to the index
+            if new_embeddings:
+                self.index.add(np.vstack(new_embeddings))  # Stack and add embeddings
+
+            print("FAISS index rebuilt successfully.")
+
+        except Exception as e:
+            print(f"Error rebuilding FAISS index: {e}")
 
     def refresh_settings(self):
         self.load_settings()  # Reload the settings from the configuration file
@@ -1012,27 +969,8 @@ class TaskApp(QWidget):
         self.task_type_input.setCurrentIndex(0)  # Reset task type dropdown to the first item
         self.status_checkbox.setChecked(False)  # Uncheck the status checkbox
 
-    def remove_task_from_sqlite(self, task_name):
-        cursor = self.conn.cursor()
-        try:
-            cursor.execute("DELETE FROM tasks WHERE task_name = ?", (task_name,))
-            self.conn.commit()
-        except Exception as e:
-            print(f"Error removing task from SQLite: {e}")
 
-    def remove_task_from_chromadb(self, task_name):
-        try:
-            # Assuming metadata contains a 'task_name' field
-            ids_to_remove = self.chromadb.get(
-                where={"task_name": task_name}
-            ).get("ids", [])
 
-            if ids_to_remove:
-                self.chromadb.delete(ids=ids_to_remove)
-            else:
-                print(f"No matching tasks found in ChromaDB for task name: {task_name}")
-        except Exception as e:
-            print(f"Error removing task from ChromaDB: {e}")
 
     def webhookcaller(self, task_json):
         url = self.settings.get("webhook_url", "")

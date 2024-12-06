@@ -1,11 +1,13 @@
 import sqlite3
-import chromadb
-from chromadb.config import Settings
 
-# Initialize SQLite database
+
+
 def init_sqlite_db():
-    conn = sqlite3.connect("tasks.db")
+    db_file = "tasks.db"  # Database file name
+    conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
+
+    # Create tasks table if not exists
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,11 +22,19 @@ def init_sqlite_db():
             status INTEGER
         )
     """)
+
+    # Create task_versions table if not exists
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS task_versions (
+            version_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL REFERENCES tasks,
+            task_name TEXT NOT NULL,
+            version_date TEXT NOT NULL,
+            version_data TEXT NOT NULL
+        )
+    """)
+
     conn.commit()
+    print("SQLite database initialized and tables created.")
     return conn
 
-# Initialize ChromaDB
-def init_chromadb():
-    client = chromadb.PersistentClient()
-    collection = client.get_or_create_collection(name="tasks")
-    return collection
