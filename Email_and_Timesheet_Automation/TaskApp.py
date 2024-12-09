@@ -695,15 +695,15 @@ class TaskApp(QWidget):
 
         # Assuming column 0 is for task_id (hidden), and subsequent columns are for task data
         self.tableWidget.setItem(row_position, 0, QTableWidgetItem(str(task_id)))  # Task ID (hidden column)
-        for i, key in enumerate(version_data.keys(), start=1):  # Start from column 1
+        for i, key in enumerate(version_data.keys(), start=0):  # Start from column 1
             self.tableWidget.setItem(row_position, i, QTableWidgetItem(str(version_data[key])))
 
-        # Hide the task_id column (if it's not meant to be visible)
-        self.tableWidget.setColumnHidden(0, True)
+
+
 
         # Add Delete button
         delete_button = QPushButton("Delete")
-        delete_button.clicked.connect(lambda: self.delete_task(task_id))
+        delete_button.clicked.connect(lambda: self.delete_task(task_id,row_position))
         self.tableWidget.setCellWidget(row_position, len(version_data), delete_button)
 
         # Clear inputs after adding the task
@@ -733,6 +733,7 @@ class TaskApp(QWidget):
 
         # Generate the HTML for all tasks
         task_collection = TaskCollection()
+        print(task_collection)
         html_content = HtmlGenerator.generate_task_table(task_collection)
 
         # Create the final JSON object containing the HTML content and task data
@@ -773,7 +774,7 @@ class TaskApp(QWidget):
         self.version_history_window = VersionHistoryWindow(parent=self, conn=self.conn)
         self.version_history_window.show()
 
-    def delete_task(self, task_id):
+    def delete_task(self, task_id,row_position):
         """
         Deletes a task from the FAISS index, metadata, SQLite database, and the UI by task_id.
         :param task_id: The unique task ID to delete
@@ -797,14 +798,9 @@ class TaskApp(QWidget):
             # Remove metadata entry
             self.metadata.pop(task_idx)
 
-            # Remove task from the UI table
-            for row in range(self.tableWidget.rowCount()):
-                # Assuming task_id is stored in the first (hidden) column
-                table_task_id = self.tableWidget.item(row, 0).text()
-                if str(task_id) == table_task_id:  # Match task_id as string
-                    self.tableWidget.removeRow(row)
-                    print(f"Task with ID {task_id} removed from the UI table.")
-                    break
+            # Remove task from the UI table by row_position
+            self.tableWidget.removeRow(row_position)
+            print(f"Task with ID {task_id} removed from the UI table.")
 
             # Rebuild the FAISS index
             self.rebuild_faiss_index()
